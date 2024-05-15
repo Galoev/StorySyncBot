@@ -163,3 +163,4 @@ output
 tmp*
 .DS_Store
 configs
+.vscode
