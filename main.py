@@ -68,7 +68,7 @@ async def sleep_with_interrupt(timeout, event):
     except asyncio.TimeoutError:
         pass
 
-def download_stories(profile: Profile):
+async def download_stories(profile: Profile):
     try:
         L.download_stories(userids=[profile], filename_target=profile.userid, latest_stamps=stampsDB, fast_update=True)
     except QueryReturnedBadRequestException as e:
@@ -80,9 +80,10 @@ def download_stories(profile: Profile):
         bot.send_message(ADMIN_USER, msg)
         print(msg)
 
-        event_inst_rebooted.wait()
+        await event_inst_rebooted.wait()
 
         msg = "Continued execution of the bot"
+        event_inst_rebooted.clear()
         bot.send_animation(ADMIN_USER, msg)
         print(msg)
 
@@ -126,7 +127,7 @@ async def run(profile: Profile, stop_event: asyncio.Event):
     while not stop_event.is_set():
         print(f"iter: {count}")
         count += 1
-        download_stories(profile)
+        await download_stories(profile)
         await post_stories(str(profile.userid), CHANNEL_ID)
         delete_all_files_in_folder(str(profile.userid))
         # await asyncio.sleep(60 + random.randint(-10, 10))
