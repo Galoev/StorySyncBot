@@ -20,8 +20,8 @@ INST_PASSWORD=os.getenv("INST_PASSWORD")
 TARGET_USERNAME=os.getenv("TARGET_USERNAME")
 CHANNEL_ID=os.getenv("CHANNEL_ID")
 TG_ACCESS_TOKEN=os.getenv("TG_ACCESS_TOKEN")
-ALLOWED_USERS=os.getenv("ALLOWED_USERS").split()
-ADMIN_USER=os.getenv("ADMIN_USER")
+ALLOWED_USERS=list(map(int, os.getenv("ALLOWED_USERS").split()))
+ADMIN_USER=int(os.getenv("ADMIN_USER"))
 
 # Initialize Instaloader
 L = Instaloader(download_video_thumbnails=False)
