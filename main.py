@@ -22,6 +22,7 @@ CHANNEL_ID=os.getenv("CHANNEL_ID")
 TG_ACCESS_TOKEN=os.getenv("TG_ACCESS_TOKEN")
 ALLOWED_USERS=list(map(int, os.getenv("ALLOWED_USERS").split()))
 ADMIN_USER=int(os.getenv("ADMIN_USER"))
+SCRAPE_INTERVAL=int(os.getenv("SCRAPE_INTERVAL"))
 
 # Initialize Instaloader
 L = Instaloader(download_video_thumbnails=False)
@@ -139,7 +140,7 @@ async def run(profile: Profile, stop_event: asyncio.Event):
         await download_stories(profile)
         await post_stories(str(profile.userid), CHANNEL_ID)
         delete_files_in_directory(str(profile.userid))
-        await sleep_with_interrupt(60 + random.randint(-10, 10), stop_event)
+        await sleep_with_interrupt(SCRAPE_INTERVAL, stop_event)
     print("Stop run loop")
 
 async def main():
