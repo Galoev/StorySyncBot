@@ -1,4 +1,5 @@
-pyTelegramBotAPI
+pyTelegramBotAPI>=4.18.1
 instaloader
 python-dotenv
 aioconsole
+aiohttp
