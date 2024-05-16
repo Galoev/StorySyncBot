@@ -109,6 +109,15 @@ def delete_all_files_in_folder(folder_path):
     command = f"rm -rf {folder_path}/*"
     os.system(command)
 
+def delete_files_in_directory(directory):
+    files = os.listdir(directory)
+
+    for file in files:
+        file_path = os.path.join(directory, file)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"Deleted file: {file_path}")
+
 async def cli_interface(stop_event: asyncio.Event):
     while True:
         command = await aioconsole.ainput()
@@ -129,8 +138,7 @@ async def run(profile: Profile, stop_event: asyncio.Event):
         count += 1
         await download_stories(profile)
         await post_stories(str(profile.userid), CHANNEL_ID)
-        delete_all_files_in_folder(str(profile.userid))
-        # await asyncio.sleep(60 + random.randint(-10, 10))
+        delete_files_in_directory(str(profile.userid))
         await sleep_with_interrupt(60 + random.randint(-10, 10), stop_event)
     print("Stop run loop")
 
