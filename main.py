@@ -84,7 +84,7 @@ async def download_stories(profile: Profile):
 
         msg = "Continued execution of the bot"
         event_inst_rebooted.clear()
-        bot.send_animation(ADMIN_USER, msg)
+        bot.send_message(ADMIN_USER, msg)
         print(msg)
 
     print("Download done")
