@@ -73,18 +73,18 @@ async def download_stories(profile: Profile):
         L.download_stories(userids=[profile], filename_target=profile.userid, latest_stamps=stampsDB, fast_update=True)
     except QueryReturnedBadRequestException as e:
         msg = f"You need to reboot your Instagram account.\n Error: {e}"
-        bot.send_message(ADMIN_USER, msg)
+        await bot.send_message(ADMIN_USER, msg)
         print(msg)
 
         msg = "Waiting for reboot..."
-        bot.send_message(ADMIN_USER, msg)
+        await bot.send_message(ADMIN_USER, msg)
         print(msg)
 
         await event_inst_rebooted.wait()
 
         msg = "Continued execution of the bot"
         event_inst_rebooted.clear()
-        bot.send_message(ADMIN_USER, msg)
+        await bot.send_message(ADMIN_USER, msg)
         print(msg)
 
     print("Download done")
