@@ -1,11 +1,13 @@
 from instaloader import Instaloader
 from instaloader import Profile
 from instaloader import LatestStamps
+from instaloader.exceptions import TwoFactorAuthRequiredException
 from telebot import TeleBot
 from dotenv import load_dotenv
 from pathlib import Path
 import asyncio
 import aioconsole
+import random
 import os
 
 
@@ -30,7 +32,11 @@ def load_session():
     print("Loading session...")
     if not session_file.exists():
         print("Session file doesn't exist. Try to login..")
-        L.login(INST_LOGIN, INST_PASSWORD)
+        try:
+            L.login(INST_LOGIN, INST_PASSWORD)
+        except TwoFactorAuthRequiredException:
+            code = input("Enter 2FA code:")
+            L.two_factor_login(code)
         print("Login done")
         return
 
@@ -86,7 +92,7 @@ async def run(profile: Profile, stop_event: asyncio.Event):
         download_stories(profile)
         await post_stories(str(profile.userid), CHANNEL_ID)
         delete_all_files_in_folder(str(profile.userid))
-        await asyncio.sleep(60)
+        await asyncio.sleep(60 + random.randint(-10, 10))
 
 async def main():
     load_session()
