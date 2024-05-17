@@ -68,7 +68,7 @@ async def stop_bot(message):
 
 def load_session():
     session_file = Path(f"configs/session-{INST_LOGIN}")
-    logger.info("Loading session...")
+    logger.info(f"Loading session from file: {session_file}")
     if not session_file.exists():
         logger.warning("Session file doesn't exist. Try to login..")
         try:
@@ -76,16 +76,17 @@ def load_session():
         except TwoFactorAuthRequiredException:
             code = input("Enter 2FA code:")
             L.two_factor_login(code)
-        logger.info(f"Login done. Session file: {session_file}")
+        logger.info("Login done.")
         return
 
     L.load_session_from_file(username=INST_LOGIN, filename=session_file)
-    logger.info("Loading done")
+    logger.info("Loading done.")
 
 def save_session():
-    logger.info("Saving session...")
-    L.save_session_to_file(filename=f"configs/session-{INST_LOGIN}")
-    logger.info("Saving done")
+    session_file = Path(f"configs/session-{INST_LOGIN}")
+    logger.info(f"Saving session from file {session_file}")
+    L.save_session_to_file(filename=session_file)
+    logger.info("Saving done to file ")
 
 async def sleep_with_interrupt(timeout, event):
     try:
@@ -155,6 +156,7 @@ async def cli_interface(stop_event: asyncio.Event):
             break
         else:
             logger.info("Unknown command. Try again.")
+    logger.debug("Exit cli_interface")
 
 async def run(profile: Profile, stop_event: asyncio.Event):
     count = 0
