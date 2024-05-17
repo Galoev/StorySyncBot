@@ -13,7 +13,7 @@ from logger import get_logger
 import logging
 
 
-load_dotenv()
+load_dotenv(override=True)
 
 INST_LOGIN=os.getenv("INST_LOGIN")
 INST_PASSWORD=os.getenv("INST_PASSWORD")
