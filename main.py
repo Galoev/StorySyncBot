@@ -3,14 +3,14 @@ from instaloader import Profile
 from instaloader import LatestStamps
 from instaloader.exceptions import TwoFactorAuthRequiredException
 from instaloader.exceptions import QueryReturnedBadRequestException
-# from telebot import TeleBot
 from telebot.async_telebot import AsyncTeleBot
 from dotenv import load_dotenv
 from pathlib import Path
 import asyncio
 import aioconsole
-import random
 import os
+from logger import get_logger
+import logging
 
 
 load_dotenv()
@@ -24,44 +24,59 @@ ALLOWED_USERS=list(map(int, os.getenv("ALLOWED_USERS").split()))
 ADMIN_USER=int(os.getenv("ADMIN_USER"))
 SCRAPE_INTERVAL=int(os.getenv("SCRAPE_INTERVAL"))
 
-# Initialize Instaloader
+
 L = Instaloader(download_video_thumbnails=False)
-# L.login(INST_LOGIN, INST_PASSWORD)
 stampsDB = LatestStamps("configs/stamps.txt")
 
-# Initialize Telegram Bot
 bot = AsyncTeleBot(TG_ACCESS_TOKEN)
 event_inst_rebooted = asyncio.Event()
+stop_event = asyncio.Event()
+
+logger = get_logger(name=__name__)
+
+
+async def log_and_send(msg, log_level=logging.DEBUG):
+    logger.log(level=log_level, msg=msg)
+    await bot.send_message(ADMIN_USER, msg)
 
 @bot.message_handler(commands=['reboot'])
 async def inst_rebooted(message):
     user_id = message.from_user.id
     if user_id in ALLOWED_USERS:
         msg = "Inst rebooted"
-        print(msg)
         event_inst_rebooted.set()
+        logger.info(msg)
         await bot.reply_to(message, msg)
+
+@bot.message_handler(commands=['stop'])
+async def stop_bot(message):
+    user_id = message.from_user.id
+    if user_id in ALLOWED_USERS:
+        msg = "Received a command from a TG to stop"
+        logger.info(msg)
+        await bot.reply_to(message, msg)
+        await stop(stop_event)
 
 def load_session():
     session_file = Path(f"configs/session-{INST_LOGIN}")
-    print("Loading session...")
+    logger.info("Loading session...")
     if not session_file.exists():
-        print("Session file doesn't exist. Try to login..")
+        logger.warning("Session file doesn't exist. Try to login..")
         try:
             L.login(INST_LOGIN, INST_PASSWORD)
         except TwoFactorAuthRequiredException:
             code = input("Enter 2FA code:")
             L.two_factor_login(code)
-        print("Login done")
+        logger.info("Login done")
         return
 
     L.load_session_from_file(username=INST_LOGIN, filename=session_file)
-    print("Loading done")
+    logger.info("Loading done")
 
 def save_session():
-    print("Saving session...")
+    logger.info("Saving session...")
     L.save_session_to_file(filename=f"configs/session-{INST_LOGIN}")
-    print("Saving done")
+    logger.info("Saving done")
 
 async def sleep_with_interrupt(timeout, event):
     try:
@@ -74,21 +89,18 @@ async def download_stories(profile: Profile):
         L.download_stories(userids=[profile], filename_target=profile.userid, latest_stamps=stampsDB, fast_update=True)
     except QueryReturnedBadRequestException as e:
         msg = f"You need to reboot your Instagram account.\n Error: {e}"
-        await bot.send_message(ADMIN_USER, msg)
-        print(msg)
+        await log_and_send(msg, logging.ERROR)
 
         msg = "Waiting for reboot..."
-        await bot.send_message(ADMIN_USER, msg)
-        print(msg)
+        await log_and_send(msg, logging.ERROR)
 
         await event_inst_rebooted.wait()
+        event_inst_rebooted.clear()
 
         msg = "Continued execution of the bot"
-        event_inst_rebooted.clear()
-        await bot.send_message(ADMIN_USER, msg)
-        print(msg)
+        await log_and_send(msg, logging.ERROR)
 
-    print("Download done")
+    logger.info("Download done")
 
 async def post_stories(folder_path: str, channel_id: str):
     files = os.listdir(folder_path)
@@ -104,11 +116,8 @@ async def post_stories(folder_path: str, channel_id: str):
             else:
                 await bot.send_video(chat_id=channel_id, video=media, width=1080, height=1920)
         
+        logger.info(f"Posted file: {file}")
         await asyncio.sleep(1)
-
-def delete_all_files_in_folder(folder_path):
-    command = f"rm -rf {folder_path}/*"
-    os.system(command)
 
 def delete_files_in_directory(directory):
     files = os.listdir(directory)
@@ -117,36 +126,39 @@ def delete_files_in_directory(directory):
         file_path = os.path.join(directory, file)
         if os.path.isfile(file_path):
             os.remove(file_path)
-            print(f"Deleted file: {file_path}")
+            logger.info(f"Deleted file: {file_path}")
+
+async def stop(stop_event: asyncio.Event):
+    logger.info("Stopping the bot...")
+    bot._polling = False
+    stop_event.set()
+    save_session()
+    msg = "Stopping done"
+    await log_and_send(msg, log_level=logging.INFO)
 
 async def cli_interface(stop_event: asyncio.Event):
     while True:
         command = await aioconsole.ainput()
-        if command == 'close':
-            print("Closing the program...")
-            bot._polling = False
-            stop_event.set()
-            save_session()
-            print("Closing done")
+        if command == 'stop':
+            await stop(stop_event)
             break
         else:
-            print("Unknown command. Try again.")
+            logger.info("Unknown command. Try again.")
 
 async def run(profile: Profile, stop_event: asyncio.Event):
     count = 0
     while not stop_event.is_set():
-        print(f"iter: {count}")
+        logger.info(f"iter: {count}")
         count += 1
         await download_stories(profile)
         await post_stories(str(profile.userid), CHANNEL_ID)
         delete_files_in_directory(str(profile.userid))
         await sleep_with_interrupt(SCRAPE_INTERVAL, stop_event)
-    print("Stop run loop")
+    logger.info("Stop run loop")
 
 async def main():
     load_session()
     profile = Profile.from_username(L.context, TARGET_USERNAME)
-    stop_event = asyncio.Event()
     tasks = [run(profile, stop_event), cli_interface(stop_event), bot.polling()]
     await asyncio.gather(*tasks)
 
