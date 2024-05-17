@@ -11,6 +11,7 @@ import aioconsole
 import os
 from logger import get_logger
 import logging
+import sys
 
 
 load_dotenv(override=True)
@@ -29,8 +30,8 @@ L = Instaloader(download_video_thumbnails=False)
 stampsDB = LatestStamps("configs/stamps.txt")
 
 bot = AsyncTeleBot(TG_ACCESS_TOKEN)
-event_inst_rebooted = asyncio.Event()
-stop_event = asyncio.Event()
+event_inst_rebooted = None
+stop_event = None
 
 logger = get_logger(name=__name__)
 
@@ -39,11 +40,19 @@ async def log_and_send(msg, log_level=logging.DEBUG):
     logger.log(level=log_level, msg=msg)
     await bot.send_message(ADMIN_USER, msg)
 
+def check_global_var(var_name, var):
+    if not var:
+        logger.log(logging.CRITICAL, f"global variable {var_name} is None")
+        save_session()
+        log_and_send("Bot stopped because of CRITICAL error", log_level=logging.CRITICAL)
+        sys.exit(1)
+
 @bot.message_handler(commands=['reboot'])
 async def inst_rebooted(message):
     user_id = message.from_user.id
     if user_id in ALLOWED_USERS:
         msg = "Inst rebooted"
+        check_global_var("event_inst_rebooted", event_inst_rebooted)
         event_inst_rebooted.set()
         logger.info(msg)
         await bot.reply_to(message, msg)
@@ -94,6 +103,7 @@ async def download_stories(profile: Profile):
         msg = "Waiting for reboot..."
         await log_and_send(msg, logging.ERROR)
 
+        check_global_var("event_inst_rebooted", event_inst_rebooted)
         await event_inst_rebooted.wait()
         event_inst_rebooted.clear()
 
@@ -131,6 +141,7 @@ def delete_files_in_directory(directory):
 async def stop(stop_event: asyncio.Event):
     logger.info("Stopping the bot...")
     bot._polling = False
+    check_global_var("stop_event", stop_event)
     stop_event.set()
     save_session()
     msg = "Stopping done"
@@ -147,6 +158,7 @@ async def cli_interface(stop_event: asyncio.Event):
 
 async def run(profile: Profile, stop_event: asyncio.Event):
     count = 0
+    check_global_var("stop_event", stop_event)
     while not stop_event.is_set():
         logger.info(f"iter: {count}")
         count += 1
@@ -157,6 +169,10 @@ async def run(profile: Profile, stop_event: asyncio.Event):
     logger.info("Stop run loop")
 
 async def main():
+    global event_inst_rebooted, stop_event
+    event_inst_rebooted = asyncio.Event()
+    stop_event = asyncio.Event()
+
     load_session()
     profile = Profile.from_username(L.context, TARGET_USERNAME)
     tasks = [run(profile, stop_event), cli_interface(stop_event), bot.polling()]
