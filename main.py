@@ -76,7 +76,7 @@ def load_session():
         except TwoFactorAuthRequiredException:
             code = input("Enter 2FA code:")
             L.two_factor_login(code)
-        logger.info("Login done")
+        logger.info(f"Login done. Session file: {session_file}")
         return
 
     L.load_session_from_file(username=INST_LOGIN, filename=session_file)
