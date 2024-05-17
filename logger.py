@@ -9,7 +9,6 @@ def get_logger(name=__name__, level=logging.DEBUG):
     logger.setLevel(level)
 
     logger_path = get_logger_path(name)
-    touch(logger_path)
     fh = logging.FileHandler(logger_path)
     fh.setLevel(level)
     format = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
@@ -35,13 +34,10 @@ def get_logger_path(name=__name__):
 
 def generate_log_filename(name=__name__):
     current_time = datetime.now()
-    time_str = current_time.strftime("%Y-%m-%d_%H:%M:%S")
+    time_str = current_time.strftime("%Y-%m-%d_%H.%M.%S")
     log_filename = f"{time_str}_{name}.log"
     return log_filename
 
-def touch(path):
-    with open(path, 'a'):
-        os.utime(path, None)
 
 if __name__ == "__main__":
     logger = get_logger()
