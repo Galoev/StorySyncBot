@@ -14,6 +14,7 @@ from instaloader.instaloader import Instaloader
 from instaloader.lateststamps import LatestStamps
 from instaloader.structures import Profile
 from telebot.async_telebot import AsyncTeleBot
+from telebot.types import InputMediaPhoto, InputMediaVideo
 
 from logger import get_logger
 
@@ -151,6 +152,28 @@ async def post_stories(folder_path: str, channel_id: str):
         await asyncio.sleep(1)
 
 
+async def post_media_to_channel(folder_path: str, channel_id: str):
+    files = os.listdir(folder_path)
+    sorted_files = sorted(files)
+    medias = []
+    log_msg = []
+
+    for file in sorted_files:
+        if not file.endswith((".jpg", ".mp4")):
+            continue
+
+        with open(folder_path + "/" + file, "rb") as media:
+            if file.endswith(".jpg"):
+                medias.append(InputMediaPhoto(media))
+            else:
+                medias.append(InputMediaVideo(media, width=1080, height=1920))
+
+        log_msg.append(file)
+
+    await bot.send_media_group(chat_id=channel_id, media=medias)
+    logger.info(f"Posted media group: {log_msg}")
+
+
 def delete_files_in_directory(directory):
     files = os.listdir(directory)
 
@@ -190,6 +213,7 @@ async def run(profile: Profile, stop_event: asyncio.Event):
         count += 1
         await download_stories(profile)
         await post_stories(str(profile.userid), CHANNEL_ID)
+        await post_media_to_channel(str(profile.userid), str(ADMIN_USER))
         delete_files_in_directory(str(profile.userid))
         await sleep_with_interrupt(SCRAPE_INTERVAL, stop_event)
     logger.info("Stop run loop")
