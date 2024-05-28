@@ -3,3 +3,4 @@ instaloader
 python-dotenv
 aioconsole
 aiohttp
+aiofiles

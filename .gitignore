@@ -164,3 +164,4 @@ tmp*
 .DS_Store
 configs
 .vscode
+.test.env

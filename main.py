@@ -3,8 +3,10 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import List, Union
 
 import aioconsole
+import aiofiles
 from dotenv import load_dotenv
 from instaloader.exceptions import (
     QueryReturnedBadRequestException,
@@ -14,7 +16,12 @@ from instaloader.instaloader import Instaloader
 from instaloader.lateststamps import LatestStamps
 from instaloader.structures import Profile
 from telebot.async_telebot import AsyncTeleBot
-from telebot.types import InputMediaPhoto, InputMediaVideo
+from telebot.types import (
+    InputMediaAudio,
+    InputMediaDocument,
+    InputMediaPhoto,
+    InputMediaVideo,
+)
 
 from logger import get_logger
 
@@ -25,8 +32,8 @@ INST_PASSWORD = os.getenv("INST_PASSWORD")
 TARGET_USERNAME = os.getenv("TARGET_USERNAME")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TG_ACCESS_TOKEN = os.getenv("TG_ACCESS_TOKEN")
-ALLOWED_USERS = list(map(int, os.getenv("ALLOWED_USERS").split()))
-ADMIN_USER = int(os.getenv("ADMIN_USER"))
+ALLOWED_USERS = list(os.getenv("ALLOWED_USERS").split())
+ADMIN_USER = os.getenv("ADMIN_USER")
 SCRAPE_INTERVAL = int(os.getenv("SCRAPE_INTERVAL"))
 
 
@@ -87,6 +94,7 @@ def load_session():
             code = input("Enter 2FA code:")
             L.two_factor_login(code)
         logger.info("Login done.")
+        save_session()
         return
 
     L.load_session_from_file(username=INST_LOGIN, filename=session_file)
@@ -153,6 +161,27 @@ async def post_stories(folder_path: str, channel_id: str):
 
 
 async def post_media_to_channel(folder_path: str, channel_id: str):
+    medias = await __collect_media(folder_path)
+
+    n = len(medias)
+    max_items_in_media_group = 10
+    for start in range(0, n, max_items_in_media_group):
+        end = min(start + max_items_in_media_group, n)
+        await bot.send_media_group(chat_id=channel_id, media=medias[start:end])
+
+    logger.info("Posted media group")
+
+
+async def __collect_media(
+    folder_path: str,
+) -> List[
+    Union[
+        InputMediaAudio,
+        InputMediaDocument,
+        InputMediaPhoto,
+        InputMediaVideo,
+    ]
+]:
     files = os.listdir(folder_path)
     sorted_files = sorted(files)
     medias = []
@@ -162,16 +191,17 @@ async def post_media_to_channel(folder_path: str, channel_id: str):
         if not file.endswith((".jpg", ".mp4")):
             continue
 
-        with open(folder_path + "/" + file, "rb") as media:
+        async with aiofiles.open(folder_path + "/" + file, mode="rb") as media:
+            file_content = await media.read()
             if file.endswith(".jpg"):
-                medias.append(InputMediaPhoto(media))
+                medias.append(InputMediaPhoto(file_content))
             else:
-                medias.append(InputMediaVideo(media, width=1080, height=1920))
+                medias.append(InputMediaVideo(file_content, width=1080, height=1920))
 
         log_msg.append(file)
 
-    await bot.send_media_group(chat_id=channel_id, media=medias)
-    logger.info(f"Posted media group: {log_msg}")
+    logger.info(f"Collected files: {log_msg}")
+    return medias
 
 
 def delete_files_in_directory(directory):
@@ -212,8 +242,8 @@ async def run(profile: Profile, stop_event: asyncio.Event):
         logger.info(f"iter: {count}")
         count += 1
         await download_stories(profile)
-        await post_stories(str(profile.userid), CHANNEL_ID)
-        await post_media_to_channel(str(profile.userid), str(ADMIN_USER))
+        # await post_stories(str(profile.userid), CHANNEL_ID)
+        await post_media_to_channel(str(profile.userid), CHANNEL_ID)
         delete_files_in_directory(str(profile.userid))
         await sleep_with_interrupt(SCRAPE_INTERVAL, stop_event)
     logger.info("Stop run loop")
@@ -231,5 +261,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
     asyncio.run(main())
