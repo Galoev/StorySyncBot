@@ -83,6 +83,15 @@ async def stop_bot(message):
         await stop(stop_event)
 
 
+@bot.message_handler(commands=["status"])
+async def status_msg(message):
+    user_id = message.from_user.id
+    if user_id in ALLOWED_USERS:
+        msg = "Received status command from TG"
+        logger.info(msg)
+        await bot.reply_to(message, msg)
+
+
 def load_session():
     session_file = Path(f"configs/session-{INST_LOGIN}")
     logger.info(f"Loading session from file: {session_file}")
@@ -162,6 +171,9 @@ async def post_stories(folder_path: str, channel_id: str):
 
 async def post_media_to_channel(folder_path: str, channel_id: str):
     medias = await __collect_media(folder_path)
+    if not medias:
+        logger.info("Nothing to post")
+        return
 
     n = len(medias)
     max_items_in_media_group = 10
@@ -215,13 +227,12 @@ def delete_files_in_directory(directory):
 
 
 async def stop(stop_event: asyncio.Event):
-    logger.info("Stopping the bot...")
+    await log_and_send("Stopping the bot...", logging.INFO)
     bot._polling = False
     await check_global_var("stop_event", stop_event)
     stop_event.set()
     save_session()
-    msg = "Stopping done"
-    await log_and_send(msg, log_level=logging.INFO)
+    logger.info("Stopping done")
 
 
 async def cli_interface(stop_event: asyncio.Event):
@@ -256,7 +267,11 @@ async def main():
 
     load_session()
     profile = Profile.from_username(L.context, TARGET_USERNAME)
-    tasks = [run(profile, stop_event), cli_interface(stop_event), bot.polling()]
+    tasks = [
+        run(profile, stop_event),
+        cli_interface(stop_event),
+        bot.polling(),
+    ]
     await asyncio.gather(*tasks)
 
 
