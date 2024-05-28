@@ -9,7 +9,6 @@ import aioconsole
 import aiofiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from dotenv import load_dotenv
 from instaloader.exceptions import (
     QueryReturnedBadRequestException,
     TwoFactorAuthRequiredException,
@@ -25,19 +24,17 @@ from telebot.types import (
     InputMediaVideo,
 )
 
+from config import (
+    ADMIN_USER,
+    ALLOWED_USERS,
+    CHANNEL_ID,
+    INST_LOGIN,
+    INST_PASSWORD,
+    SCRAPE_INTERVAL,
+    TARGET_USERNAME,
+    TG_ACCESS_TOKEN,
+)
 from logger import get_logger
-
-load_dotenv(override=True)
-
-INST_LOGIN = os.getenv("INST_LOGIN")
-INST_PASSWORD = os.getenv("INST_PASSWORD")
-TARGET_USERNAME = os.getenv("TARGET_USERNAME")
-CHANNEL_ID = os.getenv("CHANNEL_ID")
-TG_ACCESS_TOKEN = os.getenv("TG_ACCESS_TOKEN")
-ALLOWED_USERS = list(os.getenv("ALLOWED_USERS").split())
-ADMIN_USER = os.getenv("ADMIN_USER")
-SCRAPE_INTERVAL = int(os.getenv("SCRAPE_INTERVAL"))
-
 
 L = Instaloader(download_video_thumbnails=False)
 stampsDB = LatestStamps("configs/stamps.txt")
@@ -108,7 +105,7 @@ def load_session():
         save_session()
         return
 
-    L.load_session_from_file(username=INST_LOGIN, filename=session_file)
+    L.load_session_from_file(username=INST_LOGIN, filename=str(session_file))
     logger.info("Loading done.")
 
 
