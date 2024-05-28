@@ -4,3 +4,4 @@ python-dotenv
 aioconsole
 aiohttp
 aiofiles
+apscheduler

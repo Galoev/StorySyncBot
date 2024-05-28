@@ -7,6 +7,8 @@ from typing import List, Union
 
 import aioconsole
 import aiofiles
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
 from instaloader.exceptions import (
     QueryReturnedBadRequestException,
@@ -241,6 +243,8 @@ async def cli_interface(stop_event: asyncio.Event):
         if command == "stop":
             await stop(stop_event)
             break
+        elif command == "status":
+            logger.info("everything works fine")
         else:
             logger.info("Unknown command. Try again.")
     logger.debug("Exit cli_interface")
@@ -260,6 +264,16 @@ async def run(profile: Profile, stop_event: asyncio.Event):
     logger.info("Stop run loop")
 
 
+async def daily_instagram_story_publish(profile: Profile, stop_event: asyncio.Event):
+    logger.debug("Start func daily_instagram_story_publish")
+
+    await download_stories(profile)
+    await post_media_to_channel(str(profile.userid), CHANNEL_ID)
+    delete_files_in_directory(str(profile.userid))
+
+    logger.debug("Stop func daily_instagram_story_publish")
+
+
 async def main():
     global event_inst_rebooted, stop_event
     event_inst_rebooted = asyncio.Event()
@@ -268,12 +282,24 @@ async def main():
     load_session()
     profile = Profile.from_username(L.context, TARGET_USERNAME)
     tasks = [
-        run(profile, stop_event),
+        # run(profile, stop_event),
         cli_interface(stop_event),
         bot.polling(),
     ]
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        func=daily_instagram_story_publish,
+        trigger=CronTrigger(hour=20, minute=56),
+        args=(profile, stop_event),
+    )
+    scheduler.start()
+
     await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
