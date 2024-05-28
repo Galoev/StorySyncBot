@@ -64,7 +64,7 @@ async def check_global_var(var_name, var):
 
 @bot.message_handler(commands=["reboot"])
 async def inst_rebooted(message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
     if user_id in ALLOWED_USERS:
         msg = "Inst rebooted"
         await check_global_var("event_inst_rebooted", event_inst_rebooted)
@@ -75,7 +75,7 @@ async def inst_rebooted(message):
 
 @bot.message_handler(commands=["stop"])
 async def stop_bot(message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
     if user_id in ALLOWED_USERS:
         msg = "Received a command from a TG to stop"
         logger.info(msg)
@@ -85,7 +85,7 @@ async def stop_bot(message):
 
 @bot.message_handler(commands=["status"])
 async def status_msg(message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
     if user_id in ALLOWED_USERS:
         msg = "Received status command from TG"
         logger.info(msg)
