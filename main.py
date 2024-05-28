@@ -290,7 +290,7 @@ async def main():
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         func=daily_instagram_story_publish,
-        trigger=CronTrigger(hour=20, minute=56),
+        trigger=CronTrigger(hour=23, minute=30),
         args=(profile, stop_event),
     )
     scheduler.start()
