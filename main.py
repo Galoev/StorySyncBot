@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Union
 
@@ -287,8 +288,9 @@ async def main():
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         func=daily_instagram_story_publish,
-        trigger=CronTrigger(hour=23, minute=30),
+        trigger=CronTrigger(hour=7, minute=30),
         args=(profile, stop_event),
+        next_run_time=datetime.now() + timedelta(minutes=3),
     )
     scheduler.start()
 
