@@ -10,31 +10,18 @@ import aioconsole
 import aiofiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from instaloader.exceptions import (
-    QueryReturnedBadRequestException,
-    TwoFactorAuthRequiredException,
-)
+from instaloader.exceptions import (QueryReturnedBadRequestException,
+                                    TwoFactorAuthRequiredException)
 from instaloader.instaloader import Instaloader
 from instaloader.lateststamps import LatestStamps
 from instaloader.structures import Profile
 from telebot.async_telebot import AsyncTeleBot
-from telebot.types import (
-    InputMediaAudio,
-    InputMediaDocument,
-    InputMediaPhoto,
-    InputMediaVideo,
-)
+from telebot.types import (InputMediaAudio, InputMediaDocument,
+                           InputMediaPhoto, InputMediaVideo)
 
-from config import (
-    ADMIN_USER,
-    ALLOWED_USERS,
-    CHANNEL_ID,
-    INST_LOGIN,
-    INST_PASSWORD,
-    SCRAPE_INTERVAL,
-    TARGET_USERNAME,
-    TG_ACCESS_TOKEN,
-)
+from config import (ADMIN_USER, ALLOWED_USERS, CHANNEL_ID, INST_LOGIN,
+                    INST_PASSWORD, SCRAPE_INTERVAL, TARGET_USERNAME,
+                    TG_ACCESS_TOKEN)
 from logger import get_logger
 
 L = Instaloader(download_video_thumbnails=False)
@@ -284,6 +271,8 @@ async def main():
         cli_interface(stop_event),
         bot.polling(),
     ]
+
+    await download_stories(profile)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
